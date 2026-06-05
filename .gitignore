@@ -1,0 +1,6 @@
+.DS_Store
+
+!AGENTS.md
+!CLAUDE.md
+!templates/**/AGENTS.md
+!templates/**/CLAUDE.md

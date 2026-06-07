@@ -1,196 +1,165 @@
-# 多 Agent CLI 单源配置最佳实践
+# Agent Rules
 
-适用对象：Claude Code、Codex、Kimi Code、opencode，以及未来新增的 Agent CLI。
+面向多 Agent CLI 的单源规则仓库。
 
-核心结论：用 `AGENTS.md` 做主配置，用各 Agent 自己识别的入口文件做“薄适配层”。不要把同一套规则复制成多份。
+这个仓库用于维护一份可复用的 Agent 行为规则，并通过轻量适配层同步给 Claude Code、Codex、Kimi Code、opencode 等工具。目标是避免在多个 Agent 配置目录里复制多份规则，减少漂移和维护成本。
 
-## 当前项目定位
+## 特性
 
-本项目目录 `~/.agent-rules/` 是多 Agent 共享规则的长期维护仓库：
+- 单源维护：以 `AGENTS.md` 作为跨 Agent 的主规则文件。
+- 薄适配层：不同 Agent 只保留必要入口，例如 Claude Code 使用 `CLAUDE.md` 引用主规则。
+- 项目模板：提供项目级 `AGENTS.md`、`CLAUDE.md` 和 Agent 项目文档结构。
+- Skill 分离：常驻规则放在 `AGENTS.md`，复杂流程沉淀为 `SKILL.md`。
+- 安全优先：内置 Git 安全、密钥保护、影响分析、验证回写等规则建议。
 
-```text
-~/.agent-rules/
-  AGENTS.md              # 当前生效的跨 Agent 主配置
-  CLAUDE.md              # 当前项目内的 Claude Code 薄适配层
-  README.md              # 方案说明
-  install-example.sh     # 安装示例
-  templates/             # 项目级、适配层和 skill 模板
-```
+## 适用场景
 
-这里维护 agent 行为规则和模板；skills 的长期中心仓库仍然是 `skillsPanel`。
+- 你同时使用多个 Agent CLI，希望它们共享同一套行为规则。
+- 你想把全局规则、项目规则、项目事实文档和 skills 分层管理。
+- 你希望新项目可以快速初始化一套面向 Agent 的协作说明。
+- 你想降低不同 Agent / 不同项目之间的规则漂移。
 
-## 1. 推荐目录结构
+## 支持的 Agent
 
-全局规则放在一个中立目录；skills 交给 `skillsPanel` 管理：
-
-```text
-~/.agent-rules/
-  AGENTS.md
-
-~/.skills-panel/
-  skills/
-    <skill-name>/
-      SKILL.md
-      scripts/
-      templates/
-      references/
-```
-
-各 CLI 的全局入口只负责指向或导入它：
-
-```text
-~/.claude/CLAUDE.md             # Claude Code 入口
-~/.codex/AGENTS.md              # Codex 入口
-~/.kimi/AGENTS.md               # Kimi Code 入口
-~/.config/opencode/AGENTS.md    # opencode 入口
-```
-
-项目内也统一用：
-
-```text
-AGENTS.md
-CLAUDE.md
-```
-
-其中项目 `CLAUDE.md` 建议只写：
-
-```md
-@AGENTS.md
-```
-
-## 2. 分层模型
-
-### 全局 `AGENTS.md`
-
-只放跨所有项目都成立的规则：
-
-- 中文沟通偏好
-- 工具使用原则
-- Git 安全红线
-- 不硬编码密钥
-- 验证和失败处理原则
-- skill 使用原则
-
-不要放具体项目命令、具体仓库路径、过长工具手册。
-
-### 项目 `AGENTS.md`
-
-放当前项目的 Agent 操作入口和风险边界：
-
-- 指向 `Reference_myself/` 的阅读入口
-- 默认只读区、禁止自动修改区、需确认修改区
-- 项目专属结构化工具入口，比如 CodeGraph、GitNexus
-- 项目特有验证例外
-- AI 容易误判的路径、依赖和历史包袱
-
-项目背景、PRD、技术设计、数据库设计、接口文档、开发计划、项目自述等事实性内容统一放在 `Reference_myself/`。项目 `AGENTS.md` 只引用路径和阅读顺序，不复制长内容。
-
-项目 `AGENTS.md` 可以提交到仓库；`Reference_myself/` 默认是本地私有资料目录，不要求进入仓库。
-
-### `SKILL.md`
-
-你的 skill 使用 [zhangsubo/skillsPanel](https://github.com/zhangsubo/skillsPanel) 统一管理，因此 `~/.skills-panel/skills/` 是 skills 的中央仓库。
-
-把“低频但复杂”的能力沉淀成 skill：
-
-- 步骤超过 5 步
-- 需要模板或脚本
-- 需要引用资料
-- 未来多个 agent 都会用
-
-`AGENTS.md` 是常驻规则，`SKILL.md` 是按需能力。全局规则越短，Agent 越稳定。
-
-skills 的安装、导入、导出、同步、健康检查都通过 skillsPanel 完成，不建议各 Agent CLI 自己维护一份独立 skill 目录。Agent 侧只消费 skillsPanel 同步过去的结果。
-
-## 3. 从你现有 `CLAUDE.md` 的迁移建议
-
-你现在的 `~/.claude/CLAUDE.md` 可以拆成三层：
-
-| 现有内容 | 推荐去向 |
-|---|---|
-| 中文沟通、极简结构化 | 全局 `~/.agent-rules/AGENTS.md` |
-| 工具优先级、不要盲读源码 | 全局 `AGENTS.md`，但写成通用原则 |
-| Git 分支保护、push 拦截 | 全局 `AGENTS.md` |
-| `Reference_myself/[auto]项目名称.md` | 项目事实源，项目 `AGENTS.md` 只引导读取，不复制内容 |
-| 防御性编程、零硬编码、熔断机制 | 全局 `AGENTS.md` |
-| CodeGraph 大段说明 | 项目 `AGENTS.md`，只在有 `.codegraph/` 或 MCP 的项目启用 |
-| `@RTK.md` | Claude 专属适配层，或迁移成公共 rules 文件 |
-
-重点：CodeGraph 不建议全局强制。不是每个项目都有 CodeGraph，放全局会导致其他 agent 在无该工具时产生无效动作。
-
-## 4. 推荐安装方式
-
-推荐使用交互式安装脚本：
-
-```sh
-./install-example.sh
-```
-
-脚本会提示选择本次要配置的 Agent，目前支持：
+当前安装脚本支持 macOS 默认路径下的：
 
 - Claude Code
 - Codex
 - Kimi Code
 - opencode
 
-注意：安装脚本仅支持 macOS 下各 Agent 的默认配置路径。如果你使用 Windows，或自定义过 `AGENTS.md` / `CLAUDE.md` 的存储位置，请手动配置，不要使用脚本自动覆盖。
+其他 Agent 也可以手动接入，只要它支持读取 `AGENTS.md`、`CLAUDE.md` 或类似入口文件。
 
-手动配置时，先创建单源规则目录。这里只管理 agent instructions，不管理 skills：
+## 仓库结构
 
-```sh
-mkdir -p ~/.agent-rules
-cp AGENTS.md ~/.agent-rules/AGENTS.md
+```text
+.
+├── AGENTS.md                         # 跨 Agent 主规则
+├── CLAUDE.md                         # 当前仓库的 Claude Code 入口
+├── install-example.sh                 # macOS 交互式安装示例
+├── templates/
+│   ├── adapters/
+│   │   └── CLAUDE.md                  # Claude Code 全局适配层模板
+│   ├── project/
+│   │   ├── AGENTS.md                  # 项目级 Agent 规则模板
+│   │   └── CLAUDE.md                  # 项目级 Claude Code 入口模板
+│   └── skills/
+│       ├── agent-rules-drift-check/   # 规则漂移检查 skill 模板
+│       └── example-skill/             # skill 示例
+├── LICENSE
+└── README.md
 ```
 
-Codex、Kimi、opencode 可以用软链接：
+## 快速开始
+
+克隆仓库：
+
+```sh
+git clone https://github.com/<your-name>/agent-rules.git ~/.agent-rules
+cd ~/.agent-rules
+```
+
+运行安装脚本：
+
+```sh
+./install-example.sh
+```
+
+脚本会提示选择要配置的 Agent，并在默认位置创建规则入口或软链接。
+
+注意：安装脚本只面向 macOS 默认路径。如果你使用 Windows、Linux，或修改过各 Agent 的配置目录，请参考下面的手动配置方式。
+
+## 手动配置
+
+### Codex / Kimi Code / opencode
+
+这些工具可以直接指向同一份 `AGENTS.md`：
 
 ```sh
 mkdir -p ~/.codex ~/.kimi ~/.config/opencode
+
 ln -sf ~/.agent-rules/AGENTS.md ~/.codex/AGENTS.md
 ln -sf ~/.agent-rules/AGENTS.md ~/.kimi/AGENTS.md
 ln -sf ~/.agent-rules/AGENTS.md ~/.config/opencode/AGENTS.md
 ```
 
-Claude Code 保留 `CLAUDE.md` 入口：
+### Claude Code
+
+Claude Code 使用 `CLAUDE.md` 作为入口，可以创建一个薄适配层：
 
 ```sh
 mkdir -p ~/.claude
+
 cat > ~/.claude/CLAUDE.md <<'EOF'
-@/Users/zhangsubo/.agent-rules/AGENTS.md
+@/Users/your-name/.agent-rules/AGENTS.md
 
 ## Claude Code Adapter
 
-- Claude 专属规则写在这里。
+- Claude Code 专属规则写在这里。
 EOF
 ```
 
-如果你确认当前 Claude Code 环境支持 `~` 展开，也可以写：
+如果你的 Claude Code 环境支持 `~` 展开，也可以写成：
 
 ```md
 @~/.agent-rules/AGENTS.md
 ```
 
-## 5. 新项目初始化模板
+## 推荐分层
 
-项目根目录：
+### 全局规则
+
+全局规则写在：
 
 ```text
-AGENTS.md
-CLAUDE.md
-Reference_myself/        # 本地私有项目知识库，可被 .gitignore 排除
+~/.agent-rules/AGENTS.md
 ```
 
-`CLAUDE.md`：
+适合放所有项目都成立的原则：
 
-```md
-@AGENTS.md
+- 默认沟通语言和输出风格
+- 工具使用优先级
+- Git 安全边界
+- 密钥和私有配置保护
+- 修改后的验证要求
+- skills 的使用原则
+
+不建议放：
+
+- 某个项目的启动命令
+- 某个项目的接口细节
+- 某个仓库专属路径
+- 大段工具手册
+- API key、token、私有 endpoint
+
+### 项目规则
+
+每个项目可以放一份项目级规则：
+
+```text
+your-project/
+├── AGENTS.md
+├── CLAUDE.md
+└── Reference_myself/
 ```
 
-`AGENTS.md` 只写 Agent 操作入口和边界，项目事实写入 `Reference_myself/`：
+项目级 `AGENTS.md` 只保留 Agent 执行任务前必须知道的入口和边界，例如：
+
+- 文档阅读顺序
+- 禁止自动修改的路径
+- 需要确认的高风险操作
+- 项目特有验证命令
+- CodeGraph、GitNexus 等结构化工具入口
+
+项目背景、PRD、技术设计、数据库设计、接口文档、开发计划和项目自述，建议统一放在 `Reference_myself/`。
+
+### 项目文档
+
+推荐结构：
 
 ```text
 Reference_myself/
-  00. README.md                 # 文档清单和阅读路径
+  00. README.md
   01. PRD-YYYYMMDD-vX.Y.md
   02. 技术设计文档-YYYYMMDD-vX.Y.md
   03. 数据库设计文档-YYYYMMDD-vX.Y.md
@@ -198,69 +167,68 @@ Reference_myself/
   05. 开发计划-YYYYMMDD-vX.Y.md
   98. [auto]agent-rules-drift-review-YYYYMMDD.md
   99. [auto]项目自述-YYYYMMDD-vX.Y.md
-  history_backup/               # 同编号旧版文档留档
+  history_backup/
 ```
 
-同一个编号如果出现不同日期或版本的文档，根目录只保留最新版本，旧版本移动到 `Reference_myself/history_backup/` 留档。
+其中：
 
-如果是 monorepo，可以在子目录增加更具体的 `AGENTS.md`：
+- `00. README.md` 只做文档清单和用途说明。
+- `99. [auto]项目自述-*.md` 用于帮助不同 Agent / 团队成员快速接手项目。
+- 同编号旧版本移动到 `history_backup/`，根目录只保留最新版本。
+
+## Skills 管理
+
+本仓库不作为 skills 的中央仓库。推荐用独立的 skills 管理系统维护：
 
 ```text
-apps/web/AGENTS.md
-services/api/AGENTS.md
-packages/ui/AGENTS.md
+~/.skills-panel/skills/
+  <skill-name>/
+    SKILL.md
+    scripts/
+    templates/
+    references/
 ```
 
-原则：越靠近工作目录的规则越具体。
+规则与 skill 的边界：
 
-## 6. 规则写作规范
+- `AGENTS.md`：常驻规则，短、稳定、全局适用。
+- `SKILL.md`：按需流程，适合复杂、低频、可复用任务。
 
-- 每条规则必须可执行，不写“写高质量代码”这种空话。
-- 全局规则尽量控制在 80 到 150 行。
-- 不重复：全局写习惯，项目写入口和边界，`Reference_myself/` 写项目事实，skill 写流程。
-- 不把 token、API key、私有 endpoint 写进项目共享规则。
-- 对高风险操作依赖工具权限、hook、sandbox 做硬约束，文字规则只做第二层提醒。
+当一个流程超过 5 步，或需要脚本、模板、参考资料时，优先沉淀为 skill，而不是继续塞进 `AGENTS.md`。
 
-## 7. 推荐演进路线
+## 设计原则
 
-第一阶段：把现有 Claude 全局规则迁移成 `~/.agent-rules/AGENTS.md`。
+- 单源优先：同一条规则只维护一份。
+- 分层清晰：全局写习惯，项目写边界，文档写事实，skill 写流程。
+- 可执行：规则要能指导动作，不写空泛口号。
+- 可迁移：尽量不绑定某个 Agent 的专有能力。
+- 安全默认：不自动覆盖用户改动，不提交密钥，不默认执行高风险操作。
+- 控制长度：全局规则保持简洁，避免 Agent 上下文被长期规则占满。
 
-第二阶段：各 CLI 全局入口都指向这份主配置。
+## 新项目初始化建议
 
-第三阶段：给常用项目补项目级 `AGENTS.md`。
+复制项目模板：
 
-第四阶段：把长流程拆成 skills，比如：
+```sh
+cp templates/project/AGENTS.md /path/to/your-project/AGENTS.md
+cp templates/project/CLAUDE.md /path/to/your-project/CLAUDE.md
+```
 
-- `agent-rules-drift-check`
-- `code-review`
-- `frontend-polish`
-- `lark-workflow`
-- `project-onboarding`
-- `release-checklist`
+然后在项目中创建文档目录：
 
-这些 skill 应该通过 skillsPanel 安装到 `~/.skills-panel/skills/`，再由 skillsPanel 同步到 Claude Code、Codex、Kimi Code、opencode 等工具目录。
+```sh
+mkdir -p /path/to/your-project/Reference_myself/history_backup
+```
 
-## 8. skillsPanel 集成约定
+如果项目会公开到 GitHub，而 `Reference_myself/` 中包含个人笔记、业务细节或敏感信息，建议把它加入 `.gitignore`。
 
-把 skillsPanel 当作 skill 的唯一管理面板：
+## 维护建议
 
-- 中央仓库：`~/.skills-panel/skills/`
-- 支持格式：`SKILL.md` 和 `skill.md`
-- 支持安装来源：本地目录、ZIP、Git 仓库
-- 支持同步方式：Symlink / Copy
-- 支持目标工具：Claude Code、Codex、OpenCode、Cursor 等；Kimi Code 可按其实际 skill 目录作为后续目标补充
-- 支持项目工作区：可扫描 `.claude/skills/`、`.cursor/skills/` 等项目内 skill 目录，并导入/导出到中央仓库
+- 修改全局规则后，检查各 Agent 入口是否仍指向同一份 `AGENTS.md`。
+- 修改项目结构、接口、数据库或开发流程后，同步更新项目级文档。
+- 定期检查各项目的 `AGENTS.md` 是否复制了过长内容，必要时迁回 `Reference_myself/` 或 skill。
+- 对高风险规则优先使用权限、hook、sandbox 或 CI 做硬约束，文字规则只作为提醒。
 
-配置原则：
+## License
 
-- `AGENTS.md` 不写长 skill 内容，只写“如何发现和使用 skill”。
-- 新 skill 先进入 skillsPanel 中央仓库，再同步到目标 Agent CLI。
-- 不手工在多个 Agent 的 skill 目录复制同一份 skill。
-- 如果某个 Agent 暂时不支持 skill 目录，就在它的全局 `AGENTS.md` 里说明：需要 skill 时优先读取 `~/.skills-panel/skills/<skill-name>/SKILL.md`。
-
-## 9. 官方依据
-
-- Claude Code memory 文档说明 `CLAUDE.md` 的全局/项目层级、`@path` 导入语法，并建议团队可维护 `AGENTS.md` 且由 `CLAUDE.md` 导入。
-- OpenAI Codex 文档说明 Codex 会读取全局 `~/.codex/AGENTS.md` 和项目内 `AGENTS.md`。
-- Kimi Code 文档说明支持用户级 `~/.kimi/AGENTS.md` 和项目级 `AGENTS.md`。
-- opencode 文档说明支持全局 `~/.config/opencode/AGENTS.md` 与项目级 `AGENTS.md`，并兼容从 Claude 迁移的规则文件。
+见 [LICENSE](LICENSE)。

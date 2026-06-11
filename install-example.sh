@@ -91,6 +91,14 @@ else
   notice "主规则已位于目标路径：$target_agents"
 fi
 
+mkdir -p "$ROOT/rules"
+if [ "$(pwd)/rules" != "$ROOT/rules" ]; then
+  rsync -a --delete --exclude='.DS_Store' "rules/" "$ROOT/rules/"
+  notice "已同步模块规则：$ROOT/rules/"
+else
+  notice "模块规则已位于目标路径：$ROOT/rules/"
+fi
+
 notice ""
 notice "请选择本次要配置的 Agent："
 
@@ -104,6 +112,10 @@ fi
 
 if ask_yes_no "是否配置 Kimi Code？" "n"; then
   install_symlink "$ROOT/AGENTS.md" "$HOME/.kimi/AGENTS.md" "Kimi Code"
+fi
+
+if ask_yes_no "是否配置 Mimo Code？" "n"; then
+  install_symlink "$ROOT/AGENTS.md" "$HOME/.config/mimocode/AGENTS.md" "Mimo Code"
 fi
 
 if ask_yes_no "是否配置 opencode？" "n"; then

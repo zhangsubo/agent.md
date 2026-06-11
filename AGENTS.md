@@ -1,83 +1,33 @@
-关于当前项目的情况，你可以阅读 ./Reference_myself/ 中的文件，从 README.md 开始读起，它会告诉你 ./Reference_myself/中的文件都有什么。
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# Agent Rules Entry
 
-This project is indexed by GitNexus as **bo-token** (2323 symbols, 4287 relationships, 47 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+这是跨 Agent 的主入口文件。保持简洁，只放所有任务都需要立即知道的规则和按需加载索引。
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+## Always
 
-## Always Do
+- 默认使用中文沟通，专业术语、变量名、库名、命令和协议名保留英文。
+- 先给结论，再给必要细节；保持简洁、准确、结构化。
+- 不输出无依据的确定性判断；不把 token、API key、密码或私有 endpoint 写入规则、文档或提交。
+- 修改前尊重用户已有改动，不覆盖、不回退未明确要求的变更。
+- 复杂、低频、可复用流程优先沉淀为 `SKILL.md`，不要继续塞进常驻规则。
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+## Progressive Loading
 
-## Never Do
+- 不要一次性读取全部规则文件。
+- 先根据用户请求判断任务类型，再只读取相关模块。
+- 如果模块之间冲突，优先级为：用户最新指令 > 项目级 `AGENTS.md` > 本文件 > `rules/` 模块。
+- 需要项目事实时，优先读取项目 `Reference_myself/00. README.md` 或文档清单；不要把项目事实复制进全局规则。
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+## Rule Modules
 
-## Resources
+| 任务场景 | 按需读取 |
+|---|---|
+| 需要更完整的沟通、任务判断、单一事实源原则 | `rules/core.md` |
+| 准备修改文件、提交、推送、处理用户已有改动 | `rules/git-safety.md` |
+| 代码理解、影响分析、重构、代码审查、结构化工具选择 | `rules/code-intelligence.md` |
+| 项目说明、`Reference_myself/`、文档回写、版本归档 | `rules/project-docs.md` |
+| 当前模型是 `xiaomi/mimo-2.5-pro` 且任务包含图片/截图/视觉理解 | `rules/mimo-image-bridge.md` |
 
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/bo-token/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/bo-token/clusters` | All functional areas |
-| `gitnexus://repo/bo-token/processes` | All execution flows |
-| `gitnexus://repo/bo-token/process/{name}` | Step-by-step execution trace |
+## Repository Notes
 
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
-
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
-
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
-
-### When to use graph tools FIRST
-
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
-- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
-- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
-- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview` + `list_communities`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
-
-### Key Tools
-
-| Tool | Use when |
-| ------ | ---------- |
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
-| `get_impact_radius` | Understanding blast radius of a change |
-| `get_affected_flows` | Finding which execution paths are impacted |
-| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes` | Finding functions/classes by name or keyword |
-| `get_architecture_overview` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes` for code review.
-3. Use `get_affected_flows` to understand impact.
-4. Use `query_graph` pattern="tests_for" to check coverage.
+- 本仓库维护 Agent rules 和模板；skills 的长期中心仓库仍是 `~/.skills-panel/skills/`。
+- 安装或同步时，`AGENTS.md` 与 `rules/` 必须一起保留，否则按需引用会失效。

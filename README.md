@@ -2,11 +2,12 @@
 
 面向多 Agent CLI 的单源规则仓库。
 
-这个仓库用于维护一份可复用的 Agent 行为规则，并通过轻量适配层同步给 Claude Code、Codex、Kimi Code、opencode 等工具。目标是避免在多个 Agent 配置目录里复制多份规则，减少漂移和维护成本。
+这个仓库用于维护一份可复用的 Agent 行为规则，并通过轻量适配层同步给 Claude Code、Codex、Kimi Code、Mimo Code、opencode 等工具。目标是避免在多个 Agent 配置目录里复制多份规则，减少漂移和维护成本。
 
 ## 特性
 
 - 单源维护：以 `AGENTS.md` 作为跨 Agent 的主规则文件。
+- 渐进式披露：`AGENTS.md` 只做入口和路由，详细规则按任务读取 `rules/`。
 - 薄适配层：不同 Agent 只保留必要入口，例如 Claude Code 使用 `CLAUDE.md` 引用主规则。
 - 项目模板：提供项目级 `AGENTS.md`、`CLAUDE.md` 和 Agent 项目文档结构。
 - Skill 分离：常驻规则放在 `AGENTS.md`，复杂流程沉淀为 `SKILL.md`。
@@ -26,6 +27,7 @@
 - Claude Code
 - Codex
 - Kimi Code
+- Mimo Code
 - opencode
 
 其他 Agent 也可以手动接入，只要它支持读取 `AGENTS.md`、`CLAUDE.md` 或类似入口文件。
@@ -37,6 +39,12 @@
 ├── AGENTS.md                         # 跨 Agent 主规则
 ├── CLAUDE.md                         # 当前仓库的 Claude Code 入口
 ├── install-example.sh                 # macOS 交互式安装示例
+├── rules/                             # 按需加载的模块化规则
+│   ├── core.md
+│   ├── git-safety.md
+│   ├── code-intelligence.md
+│   ├── project-docs.md
+│   └── mimo-image-bridge.md
 ├── templates/
 │   ├── adapters/
 │   │   └── CLAUDE.md                  # Claude Code 全局适配层模板
@@ -69,19 +77,35 @@ cd ~/.agent-rules
 
 注意：安装脚本只面向 macOS 默认路径。如果你使用 Windows、Linux，或修改过各 Agent 的配置目录，请参考下面的手动配置方式。
 
+## 升级和同步
+
+如果你已经安装过旧版本，升级到模块化规则后需要确保 `rules/` 目录也存在于 `~/.agent-rules/`。最简单的方式是在仓库目录重新运行安装脚本：
+
+```sh
+cd ~/.agent-rules
+./install-example.sh
+```
+
+脚本会先同步 `AGENTS.md` 和 `rules/`，再询问是否配置各 Agent。对于已经配置好的 Agent，如果提示入口文件已存在，可以选择 `n` 跳过；这不会影响主规则和模块规则的同步。
+
+如果你的真实规则目录就是当前仓库 `~/.agent-rules`，通常不需要重新安装，因为 `rules/` 已经在仓库内。需要重新运行脚本的主要场景是：你从其他目录安装、想刷新默认路径下的规则副本，或想让 Mimo Code 等新 Agent 入口进入脚本管理。
+
 ## 手动配置
 
-### Codex / Kimi Code / opencode
+### Codex / Kimi Code / Mimo Code / opencode
 
 这些工具可以直接指向同一份 `AGENTS.md`：
 
 ```sh
-mkdir -p ~/.codex ~/.kimi ~/.config/opencode
+mkdir -p ~/.codex ~/.kimi ~/.config/mimocode ~/.config/opencode
 
 ln -sf ~/.agent-rules/AGENTS.md ~/.codex/AGENTS.md
 ln -sf ~/.agent-rules/AGENTS.md ~/.kimi/AGENTS.md
+ln -sf ~/.agent-rules/AGENTS.md ~/.config/mimocode/AGENTS.md
 ln -sf ~/.agent-rules/AGENTS.md ~/.config/opencode/AGENTS.md
 ```
+
+手动配置时也要保留 `~/.agent-rules/rules/`，否则 `AGENTS.md` 中的按需模块引用会失效。
 
 ### Claude Code
 
@@ -109,20 +133,27 @@ EOF
 
 ### 全局规则
 
-全局规则写在：
+全局入口写在：
 
 ```text
 ~/.agent-rules/AGENTS.md
 ```
 
-适合放所有项目都成立的原则：
+详细规则按模块放在：
 
-- 默认沟通语言和输出风格
-- 工具使用优先级
-- Git 安全边界
-- 密钥和私有配置保护
-- 修改后的验证要求
-- skills 的使用原则
+```text
+~/.agent-rules/rules/
+```
+
+`AGENTS.md` 只保留所有任务都要立即知道的短规则和模块索引。详细规则按任务读取：
+
+| 模块 | 读取场景 |
+|---|---|
+| `rules/core.md` | 需要完整沟通、任务判断、单一事实源原则 |
+| `rules/git-safety.md` | 修改文件、提交、推送、处理用户已有改动 |
+| `rules/code-intelligence.md` | 代码理解、影响分析、重构、代码审查 |
+| `rules/project-docs.md` | `Reference_myself/`、文档回写、版本归档 |
+| `rules/mimo-image-bridge.md` | Mimo Pro 模型处理图片/截图/视觉理解 |
 
 不建议放：
 
@@ -131,6 +162,8 @@ EOF
 - 某个仓库专属路径
 - 大段工具手册
 - API key、token、私有 endpoint
+
+安装或同步时，`AGENTS.md` 和 `rules/` 必须一起保留，否则模块引用会失效。
 
 ### 项目规则
 

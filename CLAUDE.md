@@ -1,4 +1,4 @@
-@AGENTS.md
+@~/.agent-rules/AGENTS.md
 
 ## Claude Code Adapter
 

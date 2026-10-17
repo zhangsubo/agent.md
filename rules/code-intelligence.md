@@ -22,9 +22,7 @@
 
 ## Verification
 
-- 修改后运行与风险匹配的检查，例如测试、构建、lint、类型检查或页面验证。
-- 如果无法验证，明确说明原因和残余风险。
-- 同一技术路径连续失败时停止复盘，给出替代方案。
+验证遵循 `~/.agent-rules/rules/project-types/programming.md` 的 Verification；本模块不重复维护执行规则。
 
 ## Optional Project-Specific Tools
 

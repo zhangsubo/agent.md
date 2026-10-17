@@ -1,13 +1,19 @@
 # Project Agent Instructions
 
+## Project Type
+
+- 当前项目类型：软件开发 / 产品设计 / 自媒体工作（保留一个或改成更具体的类型）。
+- 先按项目类型读取全局规则中的对应模块，再读取本文件的项目边界。
+- 如果本项目跨多个类型，写清主类型和辅助类型；执行任务时以用户最新目标为准。
+
 ## Project Knowledge
 
 - 项目介绍、PRD、技术设计、数据库设计、接口文档、开发计划和 Agent 项目自述统一放在 `Reference_myself/`。
-- 接手任务时，先阅读 `Reference_myself/` 中的 README 或文档清单，再按任务类型读取相关文档。
+- 需要项目事实时，先读 `Reference_myself/00. README.md` 或文档清单定位入口；实现/调试读取技术文档，需求读取 PRD，接口变更读取接口文档，数据库变更读取数据库文档，规则漂移检查读取 `agent-rules-drift-check` skill。只读取与当前任务相关的资料。
 - `Reference_myself/` 默认是本地私有资料目录，不要求进入仓库；不要把其中的敏感信息复制到公开文件。
 - 本文件不重复维护项目背景、完整架构、API 细节、数据库设计和开发计划；这里只保留 Agent 执行任务时必须先看到的入口和边界。
 
-文档结构严格遵循：
+文档结构示例（按需采用，不要求创建所有文件）：
 
 ```text
 Reference_myself/
@@ -27,18 +33,26 @@ Reference_myself/
 
 仅填写 `Reference_myself/` 或项目公开文档中没有覆盖、但 Agent 每次执行都必须知道的短规则。能放进项目文档的长说明不要写在这里。
 
+## Product Design Workflow
+
+当当前项目类型是“产品设计”时：
+
+- 产品规划与产物生成必须使用 `pm-workflow` skill。
+- 执行时读取并遵循该 skill 的完整说明；本文件不复制 skill 流程。
+
 ## Protected Areas
 
 - 默认只读目录：
 - 禁止自动修改的文件：
 - 需要用户确认后才能修改的文件：
-- 涉及生产数据、认证、支付、权限、删除、迁移、部署的操作必须先做影响分析并等待确认。
+- 高危操作按 `~/.agent-rules/rules/git-safety.md` 判断授权范围；已有明确授权不重复确认。
 
-## Coding Rules
+## Software Development Rules
+
+当当前项目类型是“软件开发”时：
 
 - 遵循 `Reference_myself/` 和现有代码中记录的代码风格、目录边界和架构约定。
 - 公共 API、数据结构、数据库 schema 改动前先评估影响范围，并回看对应设计文档。
-- 新增用户可见行为需要覆盖测试，或说明无法测试的原因。
 
 ## Risk Notes
 
@@ -51,6 +65,8 @@ Reference_myself/
 - 文本搜索只用于查找字面内容、日志、注释和配置键。
 
 ## Verification Matrix
+
+- 验证与本地隔离检查的自动执行遵循 `~/.agent-rules/rules/project-types/programming.md` 的 Verification（软件开发任务适用）。
 
 - 默认检查命令见 `Reference_myself/00. README.md` 或项目公开 README。
 - 只在这里记录项目特有的验证例外：

@@ -8,6 +8,8 @@
 
 - 单源维护：以 `AGENTS.md` 作为跨 Agent 的主规则文件。
 - 渐进式披露：`AGENTS.md` 只做入口和路由，详细规则按任务读取 `rules/`。
+- 项目类型分流：软件开发、产品设计、自媒体工作等项目读取不同项目类型规则。
+- 初始化引导：目录缺少项目级 Agent 入口时，从现有资料推断项目类型和默认值，只询问阻塞初始化的缺失信息，并验证入口与引用。
 - 薄适配层：不同 Agent 只保留必要入口，例如 Claude Code 使用 `CLAUDE.md` 引用主规则。
 - 项目模板：提供项目级 `AGENTS.md`、`CLAUDE.md` 和 Agent 项目文档结构。
 - Skill 分离：常驻规则放在 `AGENTS.md`，复杂流程沉淀为 `SKILL.md`。
@@ -43,14 +45,21 @@
 │   ├── core.md
 │   ├── git-safety.md
 │   ├── code-intelligence.md
+│   ├── project-init.md
 │   ├── project-docs.md
-│   └── mimo-image-bridge.md
+│   ├── mimo-image-bridge.md
+│   └── project-types/
+│       ├── programming.md
+│       ├── product-manager.md
+│       └── content-creator.md
 ├── templates/
 │   ├── adapters/
 │   │   └── CLAUDE.md                  # Claude Code 全局适配层模板
 │   ├── project/
 │   │   ├── AGENTS.md                  # 项目级 Agent 规则模板
-│   │   └── CLAUDE.md                  # 项目级 Claude Code 入口模板
+│   │   ├── CLAUDE.md                  # 项目级 Claude Code 入口模板
+│   │   └── product-design/
+│   │       └── AGENTS.md              # 产品设计项目专用模板
 │   └── skills/
 │       ├── agent-rules-drift-check/   # 规则漂移检查 skill 模板
 │       └── example-skill/             # skill 示例
@@ -105,7 +114,9 @@ ln -sf ~/.agent-rules/AGENTS.md ~/.config/mimocode/AGENTS.md
 ln -sf ~/.agent-rules/AGENTS.md ~/.config/opencode/AGENTS.md
 ```
 
-手动配置时也要保留 `~/.agent-rules/rules/`，否则 `AGENTS.md` 中的按需模块引用会失效。
+手动配置时也要保留 `~/.agent-rules/rules/`。入口和模块统一使用 `~/.agent-rules/...` 引用，Agent 应先将 `~` 展开为用户主目录，再向文件工具传入绝对路径；不能从入口软链接所在目录解析 `rules/`。例如 Mimo Code 应读取 `~/.agent-rules/rules/project-docs.md`，而不是 `~/.config/mimocode/rules/project-docs.md`。无需在每个 Agent 配置目录增加 `rules` 软链接。
+
+仅修改中心规则时，已有软链接无需重建；已运行的会话可能保留旧规则，请新建会话或显式重新读取入口。若将本仓库的 `CLAUDE.md` 软链接为全局入口，其主规则引用也指向 `~/.agent-rules/AGENTS.md`；项目内的 `CLAUDE.md` 仍引用项目自己的 `AGENTS.md`。
 
 ### Claude Code
 
@@ -147,13 +158,20 @@ EOF
 
 `AGENTS.md` 只保留所有任务都要立即知道的短规则和模块索引。详细规则按任务读取：
 
+| 项目类型 | 读取场景 |
+|---|---|
+| `~/.agent-rules/rules/project-types/programming.md` | 软件开发：开发、调试、重构、测试、发布 |
+| `~/.agent-rules/rules/project-types/product-manager.md` | 产品设计：需求收集、PRD、用户故事、原型说明 |
+| `~/.agent-rules/rules/project-types/content-creator.md` | 自媒体工作：公众号写作、小红书图文、选题、内容日历 |
+
 | 模块 | 读取场景 |
 |---|---|
-| `rules/core.md` | 需要完整沟通、任务判断、单一事实源原则 |
-| `rules/git-safety.md` | 修改文件、提交、推送、处理用户已有改动 |
-| `rules/code-intelligence.md` | 代码理解、影响分析、重构、代码审查 |
-| `rules/project-docs.md` | `Reference_myself/`、文档回写、版本归档 |
-| `rules/mimo-image-bridge.md` | Mimo Pro 模型处理图片/截图/视觉理解 |
+| `~/.agent-rules/rules/core.md` | 需要完整沟通、任务判断、单一事实源原则 |
+| `~/.agent-rules/rules/project-init.md` | 目录缺少项目级 Agent 入口，或用户要求初始化/补全项目初始化 |
+| `~/.agent-rules/rules/git-safety.md` | 修改文件、提交、推送、处理用户已有改动 |
+| `~/.agent-rules/rules/code-intelligence.md` | 代码理解、影响分析、重构、代码审查 |
+| `~/.agent-rules/rules/project-docs.md` | `Reference_myself/`、文档回写、版本归档 |
+| `~/.agent-rules/rules/mimo-image-bridge.md` | Mimo Pro 模型处理图片/截图/视觉理解 |
 
 不建议放：
 
@@ -227,7 +245,13 @@ Reference_myself/
 - `AGENTS.md`：常驻规则，短、稳定、全局适用。
 - `SKILL.md`：按需流程，适合复杂、低频、可复用任务。
 
-当一个流程超过 5 步，或需要脚本、模板、参考资料时，优先沉淀为 skill，而不是继续塞进 `AGENTS.md`。
+需要脚本、模板、参考资料或重复执行的复杂流程，优先沉淀为 skill，而不是继续塞进 `AGENTS.md`。
+
+Skill 模板以 `SKILL.md` 作为路由入口，详细审查策略、报告格式和提示词放在 `references/`，Hook 仅在用户要求时读取 `scripts/`。产品规划与产物生成统一引用 `pm-workflow`。
+
+`.baoyu-skills/baoyu-xhs-images/EXTEND.md` 是外部 `baoyu-xhs-images` skill 的项目配置，不是本仓库可调用 skill，不纳入 skill 路由。
+
+私有 worktree 资料保护由 `orca-worktree-private-data` skill 维护，事实源位于 `~/.skills-panel/skills/orca-worktree-private-data/`；全局技能目录仅保存软链接。它提供外部持久目录接入、归档校验脚本及 Orca hook 配置说明。删除前保护规则见 `rules/git-safety.md`。安装 skill 不会自动为已有业务仓库配置 hook；首次接入须在目标仓库验证。
 
 ## 设计原则
 
@@ -239,6 +263,8 @@ Reference_myself/
 - 控制长度：全局规则保持简洁，避免 Agent 上下文被长期规则占满。
 
 ## 新项目初始化建议
+
+Agent 执行项目初始化时，按 `rules/project-init.md` 检查 Orca 归属；Orca 项目必须自动使用 `orca-worktree-private-data` skill 完成私有资料备份、创建和归档 hooks 配置及验证。已接入项目只补缺项，受阻时明确报告。此入口由 Agent 初始化流程触发；仅在 Orca 界面添加项目或手动复制模板不会自动执行。
 
 复制项目模板：
 
